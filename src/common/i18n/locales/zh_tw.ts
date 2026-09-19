@@ -227,7 +227,7 @@ export const zh_tw: Texts = {
   endResearch: "結束檢討",
   startEndResearch: "檢討開始/結束",
   copyAnalysisForLLM: "LLM解説用にコピー", // TODO: Translate
-  analysisCopyPrompt: "LLM解説用プロンプト", // TODO: Translate
+  analysisCopyPrompt: "LLM 解説用プロンプト", // TODO: Translate
   defaultAnalysisCopyPrompt:
     "以下の将棋の局面とエンジンの読み筋をもとに、局面の特徴、各候補手の狙い、注意すべき応手を日本語で解説してください。\n提供された読み筋と評価値を根拠にし、推測は推測と明記してください。", // TODO: Translate
   noAnalysisToCopy:
