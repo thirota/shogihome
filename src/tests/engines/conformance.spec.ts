@@ -1,19 +1,26 @@
 // @vitest-environment node
 //
-// public/engines/ に置かれた全てのエンジンが specs/wasm-engine-abi.md の仕様を
+// 組み込み対象に置かれた全てのエンジンが specs/wasm-engine-abi.md の仕様を
 // 満たしていることを確認する。エンジンを追加すると自動的に検証対象になる。
+//
+// 置き場所は public/engines/ と、ビルドプロファイルの engines.dirs
+// (specs/build-profile.md)。別のリポジトリは自分のプロファイルを
+// SHOGIHOME_BUILD_PROFILE で渡せば、組み込むエンジンをここで検証できる。
 import fs from "node:fs";
 import path from "node:path";
 import { parseOptionCommand } from "@/renderer/wasm-engine/protocol.js";
 import { Position } from "tsshogi";
 import { enginePathOf, isBuiltinEnginePath } from "@/renderer/wasm-engine/catalog.js";
 import {
+  engineAssetName,
+  engineDirPath,
   handshake,
   launchEngine,
   listEngineDirs,
-  PUBLIC_ENGINES_DIR,
   readManifest,
+  resolveEngineAsset,
 } from "./driver.js";
+import { PUBLIC_ENGINES_DIR } from "@plugins/builtin_engines.js";
 
 const engineDirs = listEngineDirs();
 
@@ -30,23 +37,28 @@ describe("engines/conformance", () => {
       expect(isBuiltinEnginePath(enginePathOf(dir)), dir).toBeTruthy();
     });
 
-    it("マニフェストと成果物が揃っていること", () => {
+    // wasm とデータファイルは assetBaseURL で外部のオリジンに置ける。その場合は
+    // 実体がネットワーク越しにあるため、取得できることをもって「揃っている」とみなす
+    // (resolveEngineAsset が取得して一時ディレクトリへ残す)。大きなファイルの
+    // ダウンロードを伴い得るので、他の項目より長い時間を認める。
+    it("マニフェストと成果物が揃っていること", async () => {
       const manifest = readManifest(dir);
-      const engineDir = path.join(PUBLIC_ENGINES_DIR, dir);
-      expect(fs.existsSync(path.join(engineDir, manifest.module))).toBeTruthy();
-      // Emscripten の出力は <module>.js と同じ場所に .wasm を置く。
-      const wasm = manifest.module.replace(/\.js$/, ".wasm");
-      expect(fs.existsSync(path.join(engineDir, wasm))).toBeTruthy();
+      // **グルーコードは配布物に含まれていなければならない。** assetBaseURL の
+      // 対象外で、常に engines/<dir>/ から読まれる。
+      expect(fs.existsSync(path.join(engineDirPath(dir), manifest.module))).toBeTruthy();
+      // Emscripten の出力はグルーコードと同じ場所に同じ名前で .wasm を置く。
+      const wasm = engineAssetName(manifest, ".wasm");
+      expect(await resolveEngineAsset(dir, wasm, path.basename(wasm)), wasm).toBeTruthy();
       for (const file of manifest.dataFiles || []) {
-        expect(fs.existsSync(path.join(engineDir, file.url)), file.url).toBeTruthy();
+        expect(await resolveEngineAsset(dir, file.url), file.url).toBeTruthy();
       }
-    });
+    }, 120000);
 
     // 配布物にエンジンを含む以上、ライセンスの提示も配布物だけで完結していなければならない。
     // ShogiHome は engine.json の licenses を読んでライセンス表示に載せる。
     it("ライセンスが宣言され、全文が同梱されていること", () => {
       const manifest = readManifest(dir);
-      const engineDir = path.join(PUBLIC_ENGINES_DIR, dir);
+      const engineDir = engineDirPath(dir);
       expect(manifest.licenses?.length, "licenses").toBeTruthy();
       for (const license of manifest.licenses || []) {
         const file = path.join(engineDir, license.file);
@@ -148,15 +160,22 @@ describe("engines/conformance", () => {
       expect(BUILTIN_ENGINE_DIRS, `${dir} が BUILTIN_ENGINE_DIRS に無い`).toContain(dir);
     }
     for (const dir of BUILTIN_ENGINE_DIRS) {
-      expect(engineDirs, `${dir} の成果物が public/engines/ に無い`).toContain(dir);
+      expect(engineDirs, `${dir} の成果物が置き場所に無い`).toContain(dir);
     }
   });
 
   // 意図せず巨大な成果物を commit していないか確認する。
+  //
+  // **対象は本家が抱えるものだけ。** ビルドプロファイルが指す外部のエンジンは
+  // このリポジトリに commit されないので、リポジトリの都合を当てはめない
+  // (大きな評価パラメータを持つエンジンが適合性テストを通れなくなる)。
   it("成果物のサイズが妥当であること", () => {
     const LIMIT_MB = 8;
     for (const dir of engineDirs) {
-      const engineDir = path.join(PUBLIC_ENGINES_DIR, dir);
+      const engineDir = engineDirPath(dir);
+      if (path.dirname(engineDir) !== PUBLIC_ENGINES_DIR) {
+        continue;
+      }
       let total = 0;
       const walk = (target: string) => {
         for (const entry of fs.readdirSync(target, { withFileTypes: true })) {

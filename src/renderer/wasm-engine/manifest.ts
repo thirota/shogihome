@@ -15,6 +15,11 @@ export const CROSS_ORIGIN_ISOLATION_REQUIRED = "cross-origin isolation is requir
 
 export const MANIFEST_FILE_NAME = "engine.json";
 
+// badge の最大文字数。スマホの縦画面でもエンジン名の横に収まる長さにする。
+// 省略して全文を後から見せる手段 (マウスオーバーなど) はタッチ端末に無いため、
+// 常に全文を表示できる長さに制限する。
+export const MAX_BADGE_LENGTH = 8;
+
 // グルーコードの出力形式。
 // esm は -sEXPORT_ES6=1 の出力で、そのまま動的 import() できる。
 // umd は -sEXPORT_ES6 無しの出力 (YaneuraOu の配布物がこれ) で、
@@ -30,6 +35,13 @@ export type EngineManifestOption = {
   vars?: string[];
 };
 
+// モバイルウェブの対局メニュー (MobileGameMenu) に並べるための宣言。
+// 宣言のあるプリセットだけがメニューに載る。
+export type EngineManifestMobileGame = {
+  // ボタンに出す名前。displayName (一覧や棋譜に使う正式な名前) より短いものを書く。
+  label: string;
+};
+
 // 1 つの wasm から複数のエンジンを見せるための定義。
 // id はそのまま URI になるため、一度公開したら変更してはならない。
 export type EngineManifestPreset = {
@@ -37,6 +49,7 @@ export type EngineManifestPreset = {
   displayName: string;
   values?: { [name: string]: string | number };
   tags?: ("game" | "research" | "mate")[];
+  mobileGame?: EngineManifestMobileGame;
 };
 
 // エンジンとその同梱物のライセンス。ライセンス表示 (renderer/helpers/copyright.ts) に出す。
@@ -67,8 +80,14 @@ export type EngineManifest = {
   moduleFormat: EngineModuleFormat;
   // moduleFormat が "umd" のときだけ意味を持つ。
   exportName?: string;
+  // wasm と dataFiles の取得先。省略時はエンジンのディレクトリ (engines/<dir>/)。
+  // 大きなファイルを配布物に含めず、オブジェクトストレージなどから配信するためのもの。
+  // **module とライセンス全文はここの対象外。** 理由は specs/wasm-engine-abi.md を参照。
+  assetBaseURL?: string;
   name: string;
   author: string;
+  // エンジン選択の一覧で名前の横に小さく添える目印 (例: "65MB")。全プリセットで共有する。
+  badge?: string;
   // スレッドを使うエンジン (-pthread) は SharedArrayBuffer を要求するため、
   // ページが cross-origin isolated でないと起動できない。
   // 宣言しておくと、モジュールを生成する前に確認して即座に失敗できる。
@@ -126,6 +145,24 @@ function asSafePath(value: unknown, path: string): string {
   return text;
 }
 
+// そのままブラウザへ渡したり、アセットの取得先になったりする値なので、
+// 文字列の形だけでなく URL として成立していることを確かめる。
+// 前方一致の検査では "https://" のようなホストの無い値を通してしまう。
+// 元の文字列と解析結果の両方を返す (値は元のまま保ち、追加の検査は URL で行う)。
+function asHttpsURL(value: unknown, path: string): { text: string; url: URL } {
+  const text = asString(value, path);
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    fail(`${path} must be a valid URL: ${text}`);
+  }
+  if (url.protocol !== "https:" || !url.hostname) {
+    fail(`${path} must be an https URL with a host: ${text}`);
+  }
+  return { text, url };
+}
+
 function parseOption(value: unknown, path: string): EngineManifestOption {
   const record = asRecord(value, path);
   const type = asString(record.type, `${path}.type`) as USIEngineOptionType;
@@ -169,20 +206,7 @@ function parseLicense(value: unknown, path: string): EngineManifestLicense {
     license.subject = asString(record.subject, `${path}.subject`);
   }
   if (record.source !== undefined) {
-    const source = asString(record.source, `${path}.source`);
-    // そのままブラウザ (または Electron の外部リンク) へ渡す値なので、
-    // 文字列の形だけでなく URL として成立していることを確かめる。
-    // 前方一致の検査では "https://" のようなホストの無い値を通してしまう。
-    let url: URL;
-    try {
-      url = new URL(source);
-    } catch {
-      fail(`${path}.source must be a valid URL: ${source}`);
-    }
-    if (url.protocol !== "https:" || !url.hostname) {
-      fail(`${path}.source must be an https URL with a host: ${source}`);
-    }
-    license.source = source;
+    license.source = asHttpsURL(record.source, `${path}.source`).text;
   }
   return license;
 }
@@ -214,6 +238,10 @@ function parsePreset(value: unknown, path: string): EngineManifestPreset {
       }
       preset.tags.push(tag);
     }
+  }
+  if (record.mobileGame !== undefined) {
+    const mobileGame = asRecord(record.mobileGame, `${path}.mobileGame`);
+    preset.mobileGame = { label: asString(mobileGame.label, `${path}.mobileGame.label`) };
   }
   return preset;
 }
@@ -250,6 +278,28 @@ export function parseEngineManifest(json: unknown): EngineManifest {
       fail(`manifest.exportName must be an identifier: ${exportName}`);
     }
     manifest.exportName = exportName;
+  }
+  if (record.assetBaseURL !== undefined) {
+    const { text, url } = asHttpsURL(record.assetBaseURL, "manifest.assetBaseURL");
+    // 相対パスを解決する基準になるため、末尾が "/" でないと最後の要素が捨てられる
+    // ("https://example.com/v1" + "engine.wasm" は "https://example.com/engine.wasm")。
+    // 黙って別の場所を指すより、書き間違いとして弾く。
+    if (!url.pathname.endsWith("/")) {
+      fail(`manifest.assetBaseURL must end with "/": ${text}`);
+    }
+    // クエリとフラグメントは解決の際に捨てられる。付けても効かないので受け付けない。
+    if (url.search || url.hash) {
+      fail(`manifest.assetBaseURL must not have a query or fragment: ${text}`);
+    }
+    manifest.assetBaseURL = text;
+  }
+  if (record.badge !== undefined) {
+    const badge = asString(record.badge, "manifest.badge");
+    // サロゲートペアを 1 文字と数えるため、コードポイント単位で数える。
+    if ([...badge].length > MAX_BADGE_LENGTH) {
+      fail(`manifest.badge must be at most ${MAX_BADGE_LENGTH} characters: ${badge}`);
+    }
+    manifest.badge = badge;
   }
   if (record.requiresCrossOriginIsolation !== undefined) {
     if (typeof record.requiresCrossOriginIsolation !== "boolean") {

@@ -1,7 +1,15 @@
 <template>
   <div>
     <div class="full column root" :class="{ paused }">
-      <div v-if="showHeader && isResearchSession" class="overlay-control row reverse">
+      <div v-if="isResearchSession" class="overlay-control row" :class="{ bottom: !showHeader }">
+        <button
+          v-if="isMobileWebApp() && !isOnMainBranch"
+          :disabled="store.appState !== AppState.NORMAL"
+          @click="store.backToMainBranch()"
+        >
+          <Icon :icon="IconType.UNDO" />
+          <span>{{ t.backToMainBranch }}</span>
+        </button>
         <button v-if="paused" @click="onUnpause">
           <Icon :icon="IconType.RESUME" />
           <span>{{ t.resume }}</span>
@@ -9,6 +17,10 @@
         <button v-else @click="onPause">
           <Icon :icon="IconType.PAUSE" />
           <span>{{ t.stop }}</span>
+        </button>
+        <button v-if="isMobileWebApp()" class="close" @click="onStopResearch">
+          <Icon :icon="IconType.STOP" />
+          <span>{{ t.endResearch }}</span>
         </button>
       </div>
       <div v-if="showHeader" class="row headers">
@@ -143,6 +155,8 @@
             <Icon :icon="IconType.ARROW_UP" /><span>-1</span>
           </button>
         </div>
+        <!-- 右下のボタンと重ならない位置までスクロールできるように余白を置く -->
+        <div v-if="isResearchSession && !showHeader" class="overlay-spacer"></div>
       </div>
     </div>
   </div>
@@ -160,11 +174,13 @@ import { computed, onBeforeUpdate, reactive, ref } from "vue";
 import { IconType } from "@/renderer/assets/icons";
 import Icon from "@/renderer/view/primitive/Icon.vue";
 import { EvaluationViewFrom, NodeCountFormat } from "@/common/settings/app";
-import { Color, Move, Position } from "tsshogi";
+import { Color, ImmutableNode, Move, Position } from "tsshogi";
 import { useAppSettings } from "@/renderer/store/settings";
 import { useStore } from "@/renderer/store";
 import { readInputAsNumber } from "@/renderer/helpers/form";
 import { useConfirmationStore } from "@/renderer/store/confirm";
+import { isMobileWebApp } from "@/renderer/ipc/api";
+import { AppState } from "@/common/control/state";
 
 const props = defineProps({
   historyMode: { type: Boolean, required: true },
@@ -188,7 +204,15 @@ const columnStyleMap = reactive({} as { [key: string]: { minWidth: string } });
 const multiPVInput = ref();
 
 onBeforeUpdate(() => {
-  for (const column of (listHeader.value as HTMLElement).childNodes) {
+  // テンプレート ref の設定は描画後のジョブなので、マウントと同じ更新の波で
+  // もう一度描画されると、まだ設定されていないことがある。
+  // (モバイルの画面を回転させると、レイアウトの切り替えと盤面のリサイズが続けて起きる。)
+  // 列幅は次の更新で測り直せるため、ここでは何もしない。
+  const header = listHeader.value as HTMLElement | undefined;
+  if (!header) {
+    return;
+  }
+  for (const column of header.childNodes) {
     if (column instanceof HTMLElement) {
       const className = column.className;
       const width = column.offsetWidth;
@@ -207,6 +231,18 @@ const isResearchSession = computed(() => {
 
 const paused = computed(() => {
   return store.isPausedResearchEngine(props.monitor.sessionID);
+});
+
+// 本譜 (各ノードで選択中の分岐を辿った先) に現在の局面があるかどうか。
+// RecordView の「本譜に戻る」ボタンと同じ条件で表示する。
+const isOnMainBranch = computed(() => {
+  const record = store.record;
+  for (let node: ImmutableNode | null = record.first; node && node.activeBranch; node = node.next) {
+    if (node === record.current) {
+      return true;
+    }
+  }
+  return false;
 });
 
 const formatNodeCount = computed(() => {
@@ -276,6 +312,10 @@ const onUnpause = () => {
   store.unpauseResearchEngine(props.monitor.sessionID);
 };
 
+const onStopResearch = () => {
+  store.stopResearch();
+};
+
 const updateMultiPV = (add: number) => {
   const value = readInputAsNumber(multiPVInput.value);
   if (!value) {
@@ -313,13 +353,18 @@ const updateMultiPV = (add: number) => {
 <style scoped>
 .root {
   position: relative;
-  padding-bottom: 2px;
   background-color: var(--active-tab-bg-color);
 }
 .overlay-control {
   position: absolute;
-  width: 100%;
   margin: 0px 0px 0px 0px;
+  right: 0;
+}
+.overlay-control.bottom {
+  bottom: 0;
+}
+.overlay-control > *:not(:first-child) {
+  margin-left: 2px;
 }
 .headers {
   width: 100%;
@@ -434,6 +479,9 @@ button span {
 }
 .multi-pv-control > * {
   margin: 0px 0px 0px 5px;
+}
+.overlay-spacer {
+  height: 24px;
 }
 .multi-pv-control input {
   width: 40px;

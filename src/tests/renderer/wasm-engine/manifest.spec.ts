@@ -175,6 +175,62 @@ describe("wasm-engine/manifest", () => {
     );
   });
 
+  // wasm と評価パラメータを外部のオリジンから配信する場合の取得先。
+  it("assetBaseURL", () => {
+    const withBase = (assetBaseURL: string) => ({ ...validManifest(), assetBaseURL });
+    expect(parseEngineManifest(validManifest()).assetBaseURL).toBeUndefined();
+    expect(parseEngineManifest(withBase("https://assets.example.com/v1/")).assetBaseURL).toBe(
+      "https://assets.example.com/v1/",
+    );
+    // ホストを持つ https の URL であること (licenses[].source と同じ規則)。
+    expect(() => parseEngineManifest(withBase("http://assets.example.com/v1/"))).toThrow(
+      /must be an https URL/,
+    );
+    expect(() => parseEngineManifest(withBase("https://"))).toThrow(/must be a valid URL/);
+    // 末尾が "/" でないと最後の要素が捨てられ、別の場所を指してしまう。
+    expect(() => parseEngineManifest(withBase("https://assets.example.com/v1"))).toThrow(
+      /must end with/,
+    );
+    // クエリとフラグメントは解決の際に捨てられるので受け付けない。
+    expect(() => parseEngineManifest(withBase("https://assets.example.com/v1/?v=2"))).toThrow(
+      /must not have a query or fragment/,
+    );
+    expect(() => parseEngineManifest(withBase("https://assets.example.com/v1/#a"))).toThrow(
+      /must not have a query or fragment/,
+    );
+  });
+
+  // モバイルの対局メニューに並べるかどうかはプリセットが宣言する。
+  // 宣言の無いプリセットはメニューに出ない (既定はメニューに出さない)。
+  it("mobileGame", () => {
+    expect(parseEngineManifest(validManifest()).presets[0].mobileGame).toBeUndefined();
+    const manifest = parseEngineManifest({
+      ...validManifest(),
+      presets: [
+        { id: "test-v1", displayName: "Test Engine Level 1", mobileGame: { label: "Test Lv.1" } },
+        { id: "test-v2", displayName: "Test Engine Level 2" },
+      ],
+    });
+    expect(manifest.presets[0].mobileGame).toEqual({ label: "Test Lv.1" });
+    expect(manifest.presets[1].mobileGame).toBeUndefined();
+  });
+
+  it("rejectsInvalidMobileGame", () => {
+    const withMobileGame = (mobileGame: unknown) => ({
+      ...validManifest(),
+      presets: [{ id: "test-v1", displayName: "Test", mobileGame }],
+    });
+    // ボタンに出す名前は省略できない。
+    expect(() => parseEngineManifest(withMobileGame({}))).toThrow(/presets\[0\].mobileGame.label/);
+    expect(() => parseEngineManifest(withMobileGame({ label: "" }))).toThrow(
+      /presets\[0\].mobileGame.label/,
+    );
+    // 真偽値で宣言する形は受け付けない (名前が無いとボタンを描けない)。
+    expect(() => parseEngineManifest(withMobileGame(true))).toThrow(
+      /presets\[0\].mobileGame must be an object/,
+    );
+  });
+
   // スレッドを使うエンジンは isolation を宣言する。
   // 宣言が無ければ既定は false で、単一スレッドのエンジンは影響を受けない。
   it("requiresCrossOriginIsolation", () => {
@@ -190,5 +246,25 @@ describe("wasm-engine/manifest", () => {
     expect(() =>
       parseEngineManifest({ ...validManifest(), requiresCrossOriginIsolation: "yes" }),
     ).toThrow(/must be a boolean/);
+  });
+
+  // 一覧で省略せずに表示するため、長さを制限する。
+  it("badge", () => {
+    expect(parseEngineManifest(validManifest()).badge).toBeUndefined();
+    expect(parseEngineManifest({ ...validManifest(), badge: "65MB" }).badge).toBe("65MB");
+    expect(parseEngineManifest({ ...validManifest(), badge: "12345678" }).badge).toBe("12345678");
+    // サロゲートペアは 1 文字と数える。
+    expect(parseEngineManifest({ ...validManifest(), badge: "🐟🐟🐟🐟🐟🐟🐟🐟" }).badge).toBe(
+      "🐟🐟🐟🐟🐟🐟🐟🐟",
+    );
+    expect(() => parseEngineManifest({ ...validManifest(), badge: "123456789" })).toThrow(
+      /manifest.badge must be at most 8 characters/,
+    );
+    expect(() => parseEngineManifest({ ...validManifest(), badge: "" })).toThrow(
+      /manifest.badge must be a non-empty string/,
+    );
+    expect(() => parseEngineManifest({ ...validManifest(), badge: 65 })).toThrow(
+      /manifest.badge must be a non-empty string/,
+    );
   });
 });

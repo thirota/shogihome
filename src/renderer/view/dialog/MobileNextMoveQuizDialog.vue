@@ -20,8 +20,10 @@
           appSettings.boardImageFileURL && fileURLToCustomSchemeURL(appSettings.boardImageFileURL)
         "
         :board-image-opacity="appSettings.enableTransparent ? appSettings.boardOpacity : 1"
+        :custom-board-color="appSettings.boardColor"
         :board-grid-color="appSettings.boardGridColor || undefined"
         :piece-stand-image-type="appSettings.pieceStandImage"
+        :custom-piece-stand-color="appSettings.pieceStandColor"
         :custom-piece-stand-image-url="
           appSettings.pieceStandImageFileURL &&
           fileURLToCustomSchemeURL(appSettings.pieceStandImageFileURL)
@@ -42,6 +44,7 @@
         :hide-clock="true"
         :drop-shadows="false"
         :allow-move="!quiz.done && !quiz.playedMove"
+        :highlight-movable-squares="appSettings.highlightMovableSquares"
         :ghost-teleport-target="ghostTeleportTarget"
         :black-player-name="t.sente"
         :white-player-name="t.gote"

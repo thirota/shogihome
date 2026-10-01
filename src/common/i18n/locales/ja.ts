@@ -268,6 +268,7 @@ export const ja: Texts = {
   standard: "標準",
   green: "緑",
   cherryBlossom: "桜",
+  selectColor: "色を選択",
   customImage: "カスタム画像",
   autumn: "紅葉",
   snow: "雪",
@@ -306,6 +307,7 @@ export const ja: Texts = {
   promoteFirstVertical: "垂直・成優先",
   promoteFirstHorizontal: "水平・成優先",
   enableDragAndDrop: "駒のドラッグ操作",
+  highlightMovableSquares: "移動可能なマスを表示",
   showFileAndRank: "段・筋を表示",
   showLeftControls: "左側操作ボタンを表示",
   showRightControls: "右側操作ボタンを表示",
@@ -503,6 +505,8 @@ export const ja: Texts = {
   userFile: "ユーザーのファイル",
   automaticBackup: "自動バックアップ",
   restore: "復元",
+  filterByFilePathOrContent: "ファイルパスまたは内容で検索",
+  loadingFileContents: "ファイルを読み込み中...",
   loadRecordFromWeb: "Webの棋譜を取得",
   backToMainBranch: "本譜に戻る",
   fetchLatestData: "最新データを取得",
@@ -756,6 +760,8 @@ export const ja: Texts = {
     "パスワードがFloodgateの要件を満たしていない可能性があります。続行しますか？",
   translationHelpNeeded: "翻訳の改善にご協力ください。",
   restartRequiredAfterLocaleChange: "言語の変更には再起動が必要です。",
+  confirmSwitchLanguage: (languageName: string) =>
+    `表示言語を「${languageName}」に切り替えますか？`,
   createDesktopShortcut: "デスクトップにショートカットを作成",
   desktopShortcutCreated: "デスクトップにショートカットを作成しました。",
   areYouSureWantToResign: "投了しますか？",
@@ -912,7 +918,7 @@ export const ja: Texts = {
     return `予期せぬURLへのリクエストです。このエラーメッセージを開発者に報告してください。 [${url}]`;
   },
   noResponseFromEnginePleaseExtendTimeout(seconds) {
-    return `${seconds}秒以内にエンジンから応答がありませんでした。エンジンの起動が重い場合はアプリ設定で待ち時間を延長してください。`;
+    return `${seconds}秒以内にエンジンから応答がありませんでした。エンジンの起動が重い場合はアプリ設定の「USIプロトコル」タブで待ち時間を延長してください。`;
   },
   stableVersionReleased(version: string) {
     return `安定版 ${version} がリリースされました！`;

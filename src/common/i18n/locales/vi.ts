@@ -278,6 +278,7 @@ export const vi: Texts = {
   standard: "Tiêu chuẩn",
   green: "Xanh lá",
   cherryBlossom: "Hoa anh đào",
+  selectColor: "色を選択", // TODO: Translate
   customImage: "Ảnh tùy chọn",
   autumn: "Mùa thu",
   snow: "Tuyết rơi",
@@ -316,6 +317,7 @@ export const vi: Texts = {
   promoteFirstVertical: "Dọc, ưu tiên phong cấp",
   promoteFirstHorizontal: "Ngang, ưu tiên phong cấp",
   enableDragAndDrop: "駒のドラッグ操作", // TODO: Translate
+  highlightMovableSquares: "移動可能なマスを表示", // TODO: Translate
   showFileAndRank: "Hiện hàng và cột",
   showLeftControls: "Hiện điều khiển bên trái",
   showRightControls: "Hiện điều khiển bên phải",
@@ -513,6 +515,8 @@ export const vi: Texts = {
   userFile: "Tệp người dùng",
   automaticBackup: "Sao lưu tự động",
   restore: "Khôi phục",
+  filterByFilePathOrContent: "ファイルパスまたは内容で検索", // TODO: Translate
+  loadingFileContents: "ファイルを読み込み中...", // TODO: Translate
   loadRecordFromWeb: "Tải kỳ phổ từ mạng",
   backToMainBranch: "Trở về biến chính",
   fetchLatestData: "Lấy dữ liệu mới nhất",
@@ -763,6 +767,8 @@ export const vi: Texts = {
     "Mật khẩu của bạn không đạt điều kiện của Floodgate. Bạn vẫn muốn tiếp tục chứ?",
   translationHelpNeeded: "Chúng tôi cần bạn giúp đỡ phiên dịch.",
   restartRequiredAfterLocaleChange: "Khởi động lại ứng dụng để áp dụng ngôn ngữ.",
+  confirmSwitchLanguage: (languageName: string) =>
+    `Bạn có muốn chuyển ngôn ngữ hiển thị sang "${languageName}" không?`,
   createDesktopShortcut: "Tạo lối tắt trên desktop",
   desktopShortcutCreated: "Đã tạo lối tắt trên desktop.",
   areYouSureWantToResign: "Bạn có thật sự muốn đầu hàng không?",
@@ -921,7 +927,7 @@ export const vi: Texts = {
     return `URL yêu cầu ngoài dự tính. Vui lòng báo cáo lỗi này cho nhà phát triển. [${url}]`;
   },
   noResponseFromEnginePleaseExtendTimeout(seconds) {
-    return `Không có phản hồi từ phần mềm sau ${seconds} giây. Vui lòng kéo dài thời gian hết giờ nếu phần mềm của bạn chậm.`;
+    return `Không có phản hồi từ phần mềm sau ${seconds} giây. Vui lòng kéo dài thời gian hết giờ trong thẻ "Định dạng USI" của cài đặt ứng dụng nếu phần mềm của bạn chậm.`;
   },
   stableVersionReleased(version: string) {
     return `Phiên bản ổn định ${version} đã ra mắt!`;

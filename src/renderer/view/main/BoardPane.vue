@@ -7,8 +7,10 @@
         appSettings.boardImageFileURL && fileURLToCustomSchemeURL(appSettings.boardImageFileURL)
       "
       :board-image-opacity="appSettings.enableTransparent ? appSettings.boardOpacity : 1"
+      :custom-board-color="appSettings.boardColor"
       :board-grid-color="appSettings.boardGridColor || undefined"
       :piece-stand-image-type="appSettings.pieceStandImage"
+      :custom-piece-stand-color="appSettings.pieceStandColor"
       :custom-piece-stand-image-url="
         appSettings.pieceStandImageFileURL &&
         fileURLToCustomSchemeURL(appSettings.pieceStandImageFileURL)
@@ -28,6 +30,7 @@
       :mobile="isMobileWebApp()"
       :allow-move="store.isMovableByUser"
       :enable-drag-and-drop="appSettings.enableDragAndDrop"
+      :highlight-movable-squares="appSettings.highlightMovableSquares"
       :black-player-name="blackPlayerName"
       :white-player-name="whitePlayerName"
       :black-player-time="clock?.black.time"

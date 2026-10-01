@@ -42,6 +42,12 @@
         <div v-for="label in board.labels" :key="label.id" :style="label.style">
           {{ label.character }}
         </div>
+        <div
+          v-for="marker in board.movableMarkers"
+          :key="marker.id"
+          class="movable-marker"
+          :style="marker.style"
+        ></div>
       </div>
 
       <!-- 先手の駒台 -->
@@ -66,14 +72,15 @@
         </div>
       </div>
 
-      <img
+      <svg
         v-for="arrow in arrows"
         :key="arrow.id"
         class="arrows"
-        src="/arrow/arrow.svg"
         :style="arrow.style"
-        style="object-fit: cover; object-position: left top"
-      />
+        :viewBox="arrow.viewBox"
+      >
+        <polygon :points="arrow.points" fill="#fe0000" />
+      </svg>
       <div
         v-for="arrow in arrows"
         v-show="arrow.labelText"
@@ -281,6 +288,11 @@ const props = defineProps({
     required: false,
     default: undefined,
   },
+  customBoardColor: {
+    type: String,
+    required: false,
+    default: undefined,
+  },
   boardImageOpacity: {
     type: Number,
     required: false,
@@ -304,6 +316,11 @@ const props = defineProps({
     required: true,
   },
   customPieceStandImageUrl: {
+    type: String,
+    required: false,
+    default: undefined,
+  },
+  customPieceStandColor: {
     type: String,
     required: false,
     default: undefined,
@@ -371,6 +388,11 @@ const props = defineProps({
     type: Boolean,
     required: false,
     default: true,
+  },
+  highlightMovableSquares: {
+    type: Boolean,
+    required: false,
+    default: false,
   },
   blackPlayerName: {
     type: String,
@@ -892,8 +914,10 @@ const config = computed(() => {
   return newConfig({
     boardImageType: props.boardImageType,
     customBoardImageURL: props.customBoardImageUrl,
+    customBoardColor: props.customBoardColor,
     pieceStandImageType: props.pieceStandImageType,
     customPieceStandImageURL: props.customPieceStandImageUrl,
+    customPieceStandColor: props.customPieceStandColor,
     pieceImageURLTemplate: props.pieceImageUrlTemplate,
     kingPieceType: props.kingPieceType,
     boardImageOpacity: props.boardImageOpacity,
@@ -939,6 +963,41 @@ const boardLayoutBuilder = computed(() => {
   return new BoardLayoutBuilder(config.value, main.value.ratio, currentBoardParams.value);
 });
 
+// 選択中の駒が移動可能なマスを列挙する。ルール違反となる手は除外する。
+const movableSquares = computed(() => {
+  if (!props.highlightMovableSquares || !props.allowMove || state.reservedMove) {
+    return [];
+  }
+  const pointer = state.pointer;
+  if (!pointer) {
+    return [];
+  }
+  const position = props.position;
+  let from: Square | PieceType;
+  if (pointer instanceof Square) {
+    if (position.board.at(pointer)?.color !== position.color) {
+      return [];
+    }
+    from = pointer;
+  } else if (pointer instanceof Piece) {
+    if (
+      pointer.color !== position.color ||
+      position.hand(pointer.color).count(pointer.type) === 0
+    ) {
+      return [];
+    }
+    from = pointer.type;
+  } else {
+    return [];
+  }
+  return Square.all.filter((to) => {
+    const move = position.createMove(from, to);
+    return (
+      move !== null && (position.isValidMove(move) || position.isValidMove(move.withPromote()))
+    );
+  });
+});
+
 const board = computed(() => {
   const dragSourceSquare = drag.active && drag.source instanceof Square ? drag.source : undefined;
   return boardLayoutBuilder.value.build(
@@ -947,6 +1006,7 @@ const board = computed(() => {
     state.pointer,
     state.reservedMove,
     dragSourceSquare,
+    movableSquares.value,
   );
 });
 
@@ -1048,9 +1108,26 @@ const arrows = computed(() => {
     const dy = end.y - start.y;
     const horizontalFactor = distance > 0 ? Math.abs(dx) / distance : 0;
     const labelOffsetY = dy > 0 ? -horizontalFactor * 12 : horizontalFactor * 12;
+    // 矢印の形状 (左端が終点)
+    const headLength = Math.min(arrowWidth * 0.79, distance);
+    const shaftTop = arrowWidth * 0.31;
+    const shaftBottom = arrowWidth * 0.665;
+    const points = [
+      [0, arrowWidth / 2],
+      [headLength, 0],
+      [headLength, shaftTop],
+      [distance, shaftTop],
+      [distance, shaftBottom],
+      [headLength, shaftBottom],
+      [headLength, arrowWidth],
+    ]
+      .map(([px, py]) => `${px},${py}`)
+      .join(" ");
     return {
       id: move.usi,
       labelText,
+      viewBox: `0 0 ${distance} ${arrowWidth}`,
+      points,
       style: {
         left: x + "px",
         top: y + "px",

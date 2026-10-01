@@ -275,6 +275,7 @@ export const zh_tw: Texts = {
   standard: "標準",
   green: "綠色",
   cherryBlossom: "櫻花",
+  selectColor: "色を選択", // TODO: Translate
   customImage: "自定義圖片",
   autumn: "紅葉",
   snow: "雪",
@@ -313,6 +314,7 @@ export const zh_tw: Texts = {
   promoteFirstVertical: "垂直（成變優先）",
   promoteFirstHorizontal: "水平（成變優先）",
   enableDragAndDrop: "駒のドラッグ操作", // TODO: Translate
+  highlightMovableSquares: "移動可能なマスを表示", // TODO: Translate
   showFileAndRank: "顯示段・筋",
   showLeftControls: "顯示左側操作按鈕",
   showRightControls: "顯示右側操作按鈕",
@@ -510,6 +512,8 @@ export const zh_tw: Texts = {
   userFile: "使用者檔案",
   automaticBackup: "自動備份",
   restore: "復原",
+  filterByFilePathOrContent: "ファイルパスまたは内容で検索", // TODO: Translate
+  loadingFileContents: "ファイルを読み込み中...", // TODO: Translate
   loadRecordFromWeb: "從網際網路取得棋譜",
   backToMainBranch: "回到本譜",
   fetchLatestData: "取得最新資料",
@@ -758,6 +762,7 @@ export const zh_tw: Texts = {
     "密碼可能不符合Floodgate之要求。您仍要繼續嗎？",
   translationHelpNeeded: "我們正在招募翻譯人員。",
   restartRequiredAfterLocaleChange: "更改語言後，請重新啟動本程式。",
+  confirmSwitchLanguage: (languageName: string) => `要將顯示語言切換為「${languageName}」嗎？`,
   createDesktopShortcut: "デスクトップにショートカットを作成", // TODO: Translate
   desktopShortcutCreated: "デスクトップにショートカットを作成しました。", // TODO: Translate
   areYouSureWantToResign: "確定要投了嗎？",
@@ -909,7 +914,7 @@ export const zh_tw: Texts = {
     return `無法從 URL 獲取資訊。請將該錯誤訊息告知開發者，謝謝。 [${url}]`;
   },
   noResponseFromEnginePleaseExtendTimeout(seconds) {
-    return `引擎在${seconds}秒内沒有回應。若引擎的啟動時間稍長，請在設定中調整引擎最長等待時間。`;
+    return `引擎在${seconds}秒内沒有回應。若引擎的啟動時間稍長，請在設定的「USI協定」分頁中調整引擎最長等待時間。`;
   },
   stableVersionReleased(version: string) {
     return `安定版 ${version} 已經發布！`;

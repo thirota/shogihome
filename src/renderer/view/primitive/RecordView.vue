@@ -98,7 +98,7 @@
             </div>
           </div>
         </div>
-        <div v-if="showBackToMainBranch">
+        <div v-if="showBackToMainBranch" class="branch-bottom-control-wrapper">
           <button
             class="branch-bottom-control"
             :disabled="!operational"
@@ -495,27 +495,42 @@ onUpdated(() => {
 .branch-list-main {
   width: auto;
   height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .branch-list {
+  /* 「本譜に戻る」ボタンを除いた領域だけでスクロールさせる。 */
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: var(--text-color);
+}
+.branch-bottom-control-wrapper {
+  flex: none;
 }
 .branch-bottom-control {
   width: 100%;
   padding: 2px;
 }
 .branch-side-control {
+  /* アイコンを position: absolute で配置しているため、ボタンの中身が幅を持たない。
+     縮めないようにしないと、分岐の一覧が長い時に幅が潰れる。 */
+  flex: none;
   width: 40px;
   height: 100%;
 }
 .branch-side-control button {
+  position: relative;
   height: 50%;
   width: 100%;
   padding: 0;
 }
+/* Safari ではボタン内の画像に対する max-height: 100% が期待通りに効かず、
+   縦幅が狭い時にアイコンが下にずれるため、position: absolute で中央に配置する。 */
 .branch-side-control button .icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   height: 40px;
   max-height: 100%;
 }

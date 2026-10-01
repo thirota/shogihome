@@ -257,6 +257,7 @@ export type Texts = {
   standard: string;
   green: string;
   cherryBlossom: string;
+  selectColor: string;
   customImage: string;
   autumn: string;
   snow: string;
@@ -295,6 +296,7 @@ export type Texts = {
   promoteFirstVertical: string;
   promoteFirstHorizontal: string;
   enableDragAndDrop: string;
+  highlightMovableSquares: string;
   showFileAndRank: string;
   showLeftControls: string;
   showRightControls: string;
@@ -490,6 +492,8 @@ export type Texts = {
   userFile: string;
   automaticBackup: string;
   restore: string;
+  filterByFilePathOrContent: string;
+  loadingFileContents: string;
   loadRecordFromWeb: string;
   backToMainBranch: string;
   fetchLatestData: string;
@@ -732,6 +736,7 @@ export type Texts = {
   yourPasswordDoesNotMeetFloodgateRequirementsDoYouStillWantToContinue: string;
   translationHelpNeeded: string;
   restartRequiredAfterLocaleChange: string;
+  confirmSwitchLanguage: (languageName: string) => string;
   createDesktopShortcut: string;
   desktopShortcutCreated: string;
   areYouSureWantToResign: string;

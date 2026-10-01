@@ -1,8 +1,11 @@
-import { getUSIEngineOptionCurrentValue, USIEngines } from "@/common/settings/usi.js";
+import {
+  getUSIEngineOptionCurrentValue,
+  mergeUSIEngine,
+  USIEngine,
+  USIEngines,
+} from "@/common/settings/usi.js";
 import { t } from "@/common/i18n/index.js";
 import * as uri from "@/common/uri.js";
-import fs from "node:fs";
-import path from "node:path";
 import {
   BUILTIN_ENGINE_DIRS,
   builtinEngineURI,
@@ -13,9 +16,11 @@ import {
   isNetworkError,
   loadBuiltinEngineLicenses,
   loadBuiltinUSIEngines,
+  loadMobileGamePlayers,
   resolveEngineDirURL,
   resolveEngineFileURL,
 } from "@/renderer/wasm-engine/catalog.js";
+import { builtinEngineRoots, listBuiltinEngines } from "@plugins/builtin_engines.js";
 import {
   CROSS_ORIGIN_ISOLATION_REQUIRED,
   EngineManifest,
@@ -28,6 +33,7 @@ const manifest: EngineManifest = {
   moduleFormat: "esm",
   name: "Sunfish4 Lite",
   author: "Kubo, Ryosuke",
+  badge: "65MB",
   licenses: [
     {
       spdx: "MIT",
@@ -49,6 +55,7 @@ const manifest: EngineManifest = {
       id: "sunfish4-lite-wasm-v1-d5",
       displayName: "Sunfish Lv. 2",
       values: { MaxDepth: 5 },
+      mobileGame: { label: "Sunfish Lv.2" },
     },
   ],
 };
@@ -65,8 +72,12 @@ describe("wasm-engine/catalog", () => {
       expect(uri.isUSIEngine(engine.uri)).toBeTruthy();
       // validateUSIEngine が path の非空を要求する。
       expect(engine.path).toBe("engines/sunfish4-lite/");
-      expect(engine.defaultName).toBe("Sunfish4 Lite");
+      // 既定の名前はプリセットごとに異なる。表示名をリセットしたときに
+      // 全てのプリセットが同じ名前にならないようにするため。
+      expect(engine.defaultName).toBe(engine.name);
       expect(engine.author).toBe("Kubo, Ryosuke");
+      // badge はマニフェストの値を全てのプリセットで共有する。
+      expect(engine.badge).toBe("65MB");
       // エンジンが宣言していない予約オプションは補完される。
       expect(engine.options["USI_Hash"]?.type).toBe("spin");
       expect(engine.options["USI_Ponder"]?.type).toBe("check");
@@ -77,18 +88,10 @@ describe("wasm-engine/catalog", () => {
     expect(engines[1].name).toBe("Sunfish Lv. 2");
   });
 
-  // 一覧は public/engines/ の内容からビルド時に作られる (plugins/builtin_engines.ts)。
+  // 一覧はエンジンの置き場所からビルド時に作られる (plugins/builtin_engines.ts)。
   // エンジンを追加するのにソースを編集しなくてよいことを、この経路で担保している。
   it("BUILTIN_ENGINE_DIRS", () => {
-    const enginesDir = path.resolve(import.meta.dirname, "../../../../public/engines");
-    const expected = fs
-      .readdirSync(enginesDir, { withFileTypes: true })
-      .filter(
-        (entry) =>
-          entry.isDirectory() && fs.existsSync(path.join(enginesDir, entry.name, "engine.json")),
-      )
-      .map((entry) => entry.name)
-      .sort();
+    const expected = listBuiltinEngines(builtinEngineRoots()).map((engine) => engine.name);
     expect(expected).toContain("sunfish4-lite");
     expect(BUILTIN_ENGINE_DIRS).toEqual(expected);
   });
@@ -123,6 +126,31 @@ describe("wasm-engine/catalog", () => {
     expect(engines[1].name).toBe("level3");
   });
 
+  // プリセットの値は、そのプリセットにとっての「エンジンの既定値」として入らなければ
+  // ならない。オプション画面の「エンジンの既定値に戻す」が戻す先が default であり、
+  // value に入れているとリセットで素のエンジンの既定値 (ここでは 64) に戻ってしまう。
+  it("buildUSIEngines/presetValuesAreDefaults", () => {
+    const engines = buildUSIEngines("sunfish4-lite", manifest);
+    const option = engines[0].options["MaxDepth"];
+    expect(option?.type === "spin" && option.default).toBe(1);
+    // ユーザーが編集したかどうかの区別を保つため、value は空のままにする。
+    expect(option?.type === "spin" && option.value).toBeUndefined();
+    // プリセットが触れていないオプションはマニフェストの申告どおり。
+    const threads = engines[0].options["Threads"];
+    expect(threads?.type === "spin" && threads.default).toBe(1);
+  });
+
+  // 保存済みの設定を引き継ぐときに、ユーザーが編集していないオプションの
+  // プリセット値が消えてはならない (mergeUSIEngine は value だけを引き継ぐ)。
+  it("buildUSIEngines/mergeKeepsPresetDefaults", () => {
+    const engines = buildUSIEngines("sunfish4-lite", manifest);
+    const local: USIEngine = JSON.parse(JSON.stringify(engines[0]));
+    local.name = "編集した名前";
+    mergeUSIEngine(engines[0], local);
+    expect(getUSIEngineOptionCurrentValue(engines[0].options["MaxDepth"])).toBe(1);
+    expect(engines[0].name).toBe("編集した名前");
+  });
+
   it("enginePath", () => {
     expect(enginePathOf("sunfish4-lite")).toBe("engines/sunfish4-lite/");
     expect(isBuiltinEnginePath("engines/sunfish4-lite/")).toBeTruthy();
@@ -139,19 +167,41 @@ describe("wasm-engine/catalog", () => {
     );
   });
 
+  // 組み込むエンジンはビルドプロファイルで増えるため、件数は一覧から決める。
   it("loadBuiltinUSIEngines", async () => {
+    const manifestURLs = BUILTIN_ENGINE_DIRS.map(
+      (dir) => new URL(`engines/${dir}/engine.json`, document.baseURI).href,
+    );
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        expect(url).toBe(new URL("engines/sunfish4-lite/engine.json", document.baseURI).href);
+        expect(manifestURLs).toContain(url);
         return { ok: true, json: async () => manifest } as Response;
       }),
     );
     const engines = await loadBuiltinUSIEngines();
-    expect(engines).toHaveLength(2);
+    expect(engines).toHaveLength(manifest.presets.length * BUILTIN_ENGINE_DIRS.length);
     // 2 回目はキャッシュから返るため fetch は増えない。
     await loadBuiltinUSIEngines();
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(BUILTIN_ENGINE_DIRS.length);
+  });
+
+  // モバイルの対局メニューに並べるプリセットはマニフェストが宣言する。
+  // 何を出すかを engine.json だけで決められることを、この経路で担保している。
+  // (マニフェストは上のテストでキャッシュ済みのため、ここでの fetch は呼ばれない。)
+  it("loadMobileGamePlayers", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => manifest }) as Response),
+    );
+    // 宣言の無いプリセット (d1) は並ばない。
+    expect(await loadMobileGamePlayers()).toEqual(
+      BUILTIN_ENGINE_DIRS.map((dir) => ({
+        uri: builtinEngineURI("sunfish4-lite-wasm-v1-d5"),
+        dir,
+        label: "Sunfish Lv.2",
+      })),
+    );
   });
 
   // 配布物に含まれるエンジンのライセンスは、同梱した全文へのリンクとして表示する。
@@ -160,14 +210,14 @@ describe("wasm-engine/catalog", () => {
       "fetch",
       vi.fn(async () => ({ ok: true, json: async () => manifest }) as Response),
     );
-    expect(await loadBuiltinEngineLicenses()).toEqual([
-      {
+    expect(await loadBuiltinEngineLicenses()).toEqual(
+      BUILTIN_ENGINE_DIRS.map((dir) => ({
         subject: "Sunfish4 Lite",
         spdx: "MIT",
-        url: new URL("engines/sunfish4-lite/LICENSE.txt", document.baseURI).href,
+        url: new URL(`engines/${dir}/LICENSE.txt`, document.baseURI).href,
         source: "https://github.com/sunfish-shogi/sunfish4/tree/v0.1.3-lite",
-      },
-    ]);
+      })),
+    );
   });
 
   it("resolveEngineFileURL", () => {

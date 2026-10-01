@@ -151,10 +151,15 @@
               { label: t.snow, value: BoardImageType.SNOW },
               { label: t.darkGreen, value: BoardImageType.DARK_GREEN },
               { label: t.dark, value: BoardImageType.DARK },
+              { label: t.selectColor, value: BoardImageType.CUSTOM_COLOR },
               { label: t.customImage, value: BoardImageType.CUSTOM_IMAGE },
             ].filter((item) => !isMobileWebApp() || item.value !== BoardImageType.CUSTOM_IMAGE)
           "
         />
+      </div>
+      <div v-show="update.boardImage === BoardImageType.CUSTOM_COLOR" class="form-item">
+        <div class="form-item-label-wide"></div>
+        <input v-model="update.boardColor" class="color-selector" type="color" />
       </div>
       <div v-show="update.boardImage === BoardImageType.CUSTOM_IMAGE" class="form-item">
         <div class="form-item-label-wide"></div>
@@ -170,7 +175,7 @@
         <ToggleButton
           v-once
           :value="!!update.boardGridColor"
-          label="色を選択"
+          :label="t.selectColor"
           @update:value="(value) => (update.boardGridColor = value ? 'black' : null)"
         />
         <input
@@ -196,10 +201,15 @@
               { label: t.snow, value: PieceStandImageType.SNOW },
               { label: t.darkGreen, value: PieceStandImageType.DARK_GREEN },
               { label: t.dark, value: PieceStandImageType.DARK },
+              { label: t.selectColor, value: PieceStandImageType.CUSTOM_COLOR },
               { label: t.customImage, value: PieceStandImageType.CUSTOM_IMAGE },
             ].filter((item) => !isMobileWebApp() || item.value !== PieceStandImageType.CUSTOM_IMAGE)
           "
         />
+      </div>
+      <div v-show="update.pieceStandImage === PieceStandImageType.CUSTOM_COLOR" class="form-item">
+        <div class="form-item-label-wide"></div>
+        <input v-model="update.pieceStandColor" class="color-selector" type="color" />
       </div>
       <div v-show="update.pieceStandImage === PieceStandImageType.CUSTOM_IMAGE" class="form-item">
         <div class="form-item-label-wide"></div>
@@ -364,6 +374,11 @@
         <div class="form-item-label-wide">{{ t.enableDragAndDrop }}</div>
         <ToggleButton v-model:value="update.enableDragAndDrop" />
       </div>
+      <!-- 移動可能なマスの表示 -->
+      <div class="form-item">
+        <div class="form-item-label-wide">{{ t.highlightMovableSquares }}</div>
+        <ToggleButton v-model:value="update.highlightMovableSquares" />
+      </div>
       <!-- 成・不成の表示 -->
       <div class="form-item">
         <div class="form-item-label-wide">
@@ -465,7 +480,7 @@
         />
       </div>
       <!-- 棋譜ファイル名-->
-      <div class="form-item row">
+      <div class="form-item">
         <div class="form-item-label-wide">
           {{ t.recordFileName }}
         </div>
@@ -480,7 +495,7 @@
         <ToggleButton v-model:value="update.useCSAV3" />
       </div>
       <!-- USI の局面表記 -->
-      <div class="form-item row">
+      <div class="form-item">
         <div class="form-item-label-wide">{{ t.positionOfUSIOutput }}</div>
         <HorizontalSelector
           v-once
@@ -498,7 +513,7 @@
         />
       </div>
       <!-- USI の指し手表記 -->
-      <div class="form-item row">
+      <div class="form-item">
         <div class="form-item-label-wide">{{ t.movesOfUSIOutput }}</div>
         <HorizontalSelector
           class="selector"
@@ -601,9 +616,9 @@
       </div>
     </div>
     <!-- USI プロトコル -->
-    <div v-if="!isMobileWebApp()" v-show="selectedTab === 'usi'" class="form-group scroll settings">
+    <div v-show="selectedTab === 'usi'" class="form-group scroll settings">
       <!-- オプション名を翻訳 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">
           {{ t.translateOptionName }}
         </div>
@@ -619,7 +634,7 @@
         <div class="form-item-small-label">{{ t.secondsSuffix }} ({{ t.between(1, 300) }})</div>
       </div>
       <!-- ノード数表記 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">{{ t.nodeCountFormat }}</div>
         <HorizontalSelector
           v-model:value="update.nodeCountFormat"
@@ -634,11 +649,7 @@
       </div>
     </div>
     <!-- 評価値・期待勝率・読み筋 -->
-    <div
-      v-if="!isMobileWebApp()"
-      v-show="selectedTab === 'evaluation'"
-      class="form-group scroll settings"
-    >
+    <div v-show="selectedTab === 'evaluation'" class="form-group scroll settings">
       <!-- 評価値の符号 -->
       <div class="form-item">
         <div class="form-item-label-wide">
@@ -675,7 +686,7 @@
         <ToggleButton v-model:value="update.showArrowScore" />
       </div>
       <!-- 勝率換算係数 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">
           {{ t.winRateCoefficient }}
         </div>
@@ -683,25 +694,25 @@
         <div class="form-item-small-label">({{ t.recommended }}: {{ t.between(600, 1500) }})</div>
       </div>
       <!-- 緩手の閾値 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">{{ t.inaccuracyThreshold }}</div>
         <input v-model.number="update.badMoveLevelThreshold1" type="number" max="100" min="0" />
         <div class="form-item-small-label">%</div>
       </div>
       <!-- 疑問手の閾値 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">{{ t.dubiousThreshold }}</div>
         <input v-model.number="update.badMoveLevelThreshold2" type="number" max="100" min="0" />
         <div class="form-item-small-label">%</div>
       </div>
       <!-- 悪手の閾値 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">{{ t.mistakeThreshold }}</div>
         <input v-model.number="update.badMoveLevelThreshold3" type="number" max="100" min="0" />
         <div class="form-item-small-label">%</div>
       </div>
       <!-- 大悪手の閾値 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">{{ t.blunderThreshold }}</div>
         <input v-model.number="update.badMoveLevelThreshold4" type="number" max="100" min="0" />
         <div class="form-item-small-label">%</div>
@@ -716,7 +727,7 @@
         </button>
       </div>
       <!-- コメントの形式 -->
-      <div class="form-item">
+      <div v-if="!isMobileWebApp()" class="form-item">
         <div class="form-item-label-wide">{{ t.commentFormat }}</div>
         <HorizontalSelector
           v-model:value="update.searchCommentFormat"
@@ -827,6 +838,10 @@
         </button>
       </div>
     </div>
+    <!-- ライセンス -->
+    <div v-if="!isNative()" v-show="selectedTab === 'license'" class="form-group scroll settings">
+      <button @click="openCopyright">Confirm copyright and license</button>
+    </div>
     <div class="main-buttons">
       <button data-hotkey="Enter" autofocus @click="saveAndClose()">
         {{ t.saveAndClose }}
@@ -883,6 +898,7 @@ import { useBusyState } from "@/renderer/store/busy";
 import { BoardLayoutType } from "@/common/settings/layout";
 import { SearchCommentFormat } from "@/common/settings/comment";
 import DialogFrame from "./DialogFrame.vue";
+import { openCopyright } from "@/renderer/helpers/copyright.js";
 
 const store = useStore();
 const selectedTab = ref("view");
@@ -891,15 +907,16 @@ const tabItems = computed(() => [
   { label: t.sounds, value: "sounds" },
   { label: t.controls, value: "controls" },
   { label: t.record, value: "record" },
+  ...(!isMobileWebApp() ? [{ label: t.book, value: "book" }] : []),
+  { label: t.usiProtocol, value: "usi" },
+  { label: t.evaluationAndEstimatedWinRateAndPV, value: "evaluation" },
   ...(!isMobileWebApp()
     ? [
-        { label: t.book, value: "book" },
-        { label: t.usiProtocol, value: "usi" },
-        { label: t.evaluationAndEstimatedWinRateAndPV, value: "evaluation" },
         { label: t.appVersion, value: "version" },
         { label: t.forDevelopers, value: "developer" },
       ]
     : []),
+  ...(!isNative() ? [{ label: t.license, value: "license" }] : []),
 ]);
 const busyState = useBusyState();
 const org = useAppSettings();
@@ -915,9 +932,11 @@ const update = ref({
   deletePieceImageMargin: org.deletePieceImageMargin,
   boardImage: org.boardImage,
   boardImageFileURL: org.boardImageFileURL,
+  boardColor: org.boardColor,
   boardGridColor: org.boardGridColor,
   pieceStandImage: org.pieceStandImage,
   pieceStandImageFileURL: org.pieceStandImageFileURL,
+  pieceStandColor: org.pieceStandColor,
   handPieceOrder: org.handPieceOrder,
   enableTransparent: org.enableTransparent,
   boardOpacity: Math.round(org.boardOpacity * 100),
@@ -925,6 +944,7 @@ const update = ref({
   recordOpacity: Math.round(org.recordOpacity * 100),
   promotionSelectorStyle: org.promotionSelectorStyle,
   enableDragAndDrop: org.enableDragAndDrop,
+  highlightMovableSquares: org.highlightMovableSquares,
   boardLabelType: org.boardLabelType,
   leftSideControlType: org.leftSideControlType,
   rightSideControlType: org.rightSideControlType,
@@ -1065,7 +1085,7 @@ const cancel = () => {
   padding-left: 10px;
 }
 input.file-path {
-  width: 250px;
+  width: min(250px, 60vw);
 }
 .image-selector {
   display: inline-block;

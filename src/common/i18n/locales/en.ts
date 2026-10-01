@@ -268,6 +268,7 @@ export const en: Texts = {
   standard: "Standard",
   green: "Green",
   cherryBlossom: "Cherry Blossom",
+  selectColor: "Select Color",
   customImage: "Custom Image",
   autumn: "Autumn",
   snow: "Snow",
@@ -306,6 +307,7 @@ export const en: Texts = {
   promoteFirstVertical: "Promote First Vertical",
   promoteFirstHorizontal: "Promote First Horizontal",
   enableDragAndDrop: "Drag & Drop",
+  highlightMovableSquares: "Highlight Movable Squares",
   showFileAndRank: "Show File & Rank",
   showLeftControls: "Show Left Controls",
   showRightControls: "Show Right Controls",
@@ -503,6 +505,8 @@ export const en: Texts = {
   userFile: "User File",
   automaticBackup: "Automatic Backup",
   restore: "Restore",
+  filterByFilePathOrContent: "Filter by File Path or Content",
+  loadingFileContents: "Loading files...",
   loadRecordFromWeb: "Load Record from Web",
   backToMainBranch: "Back to Main Branch",
   fetchLatestData: "Fetch Latest Data",
@@ -754,6 +758,8 @@ export const en: Texts = {
     "Your password does not meet Floodgate's requirements. Do you still want to continue?",
   translationHelpNeeded: "We'd like your help to translate.",
   restartRequiredAfterLocaleChange: "You should restart this app to change the language.",
+  confirmSwitchLanguage: (languageName: string) =>
+    `Do you want to switch the display language to "${languageName}"?`,
   createDesktopShortcut: "Create desktop shortcut",
   desktopShortcutCreated: "Desktop shortcut created.",
   areYouSureWantToResign: "Are you sure you want to resign?",
@@ -912,7 +918,7 @@ export const en: Texts = {
     return `Unexpected request URL. Please report this error message to developer. [${url}]`;
   },
   noResponseFromEnginePleaseExtendTimeout(seconds) {
-    return `No response from the engine for ${seconds} seconds. Please extend the timeout in the app settings if your engine is slow.`;
+    return `No response from the engine for ${seconds} seconds. Please extend the timeout in the "USI Protocol" tab of the app settings if your engine is slow.`;
   },
   stableVersionReleased(version: string) {
     return `Stable version ${version} released!`;

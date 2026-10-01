@@ -112,6 +112,13 @@ const usiSessions = new USISessionManager(
 usiSessions.setHandlers(usiSessionHandlers);
 
 // Electron を使わずにシンプルな Web アプリケーションとして実行した場合に使用します。
+/**
+ * アプリ設定が保存済みかどうかを返します。
+ */
+export function hasSavedAppSettings(): boolean {
+  return localStorage.getItem(STORAGE_KEY.APP_SETTINGS) !== null;
+}
+
 export const webAPI: Bridge = {
   // Core
   updateAppState(): void {
@@ -145,6 +152,7 @@ export const webAPI: Bridge = {
       ...defaultAppSettings(),
       promotionSelectorStyle: PromotionSelectorStyle.VERTICAL_PREFER_BOTTOM,
       enableDragAndDrop: false,
+      engineTimeoutSeconds: 30,
     };
     const json = localStorage.getItem(STORAGE_KEY.APP_SETTINGS);
     if (!json) {
@@ -339,6 +347,9 @@ export const webAPI: Bridge = {
   },
   async clearRecordFileHistory(): Promise<void> {
     // Do Nothing
+  },
+  async loadRecordFileHistoryContents(): Promise<string> {
+    return "{}";
   },
   async saveRecordFileBackup(): Promise<void> {
     // Do Nothing
@@ -677,6 +688,9 @@ export const webAPI: Bridge = {
     throw new Error(t.thisFeatureNotAvailableOnWebApp);
   },
   openExplorer() {
+    // DO NOTHING
+  },
+  openParentDirectory() {
     // DO NOTHING
   },
   openWebBrowser(url: string) {
